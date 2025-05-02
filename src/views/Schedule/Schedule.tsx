@@ -1,11 +1,10 @@
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import React, { useCallback, useState } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, FlatList } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, FlatList, Modal, Pressable } from "react-native";
 import { ScheduleStackList } from "./ScheduleStack";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect } from "@react-navigation/native";
-import { Dropdown } from "react-native-element-dropdown";
 
 type Props = NativeStackScreenProps<ScheduleStackList, 'Schedule'>;
 type Task = {
@@ -19,7 +18,9 @@ type Task = {
 
 const Schedule: React.FC<Props> = ({ navigation }) => {
    const [tasks, setTasks] = useState<Task[]>([]);
-
+   const [taskConfigVisible, setTaskConfigVisible] = useState<boolean>(false);
+   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+   
    const loadTasks = async () => {
       try {
          const stored = await AsyncStorage.getItem('tasks');
@@ -32,6 +33,46 @@ const Schedule: React.FC<Props> = ({ navigation }) => {
          console.error("Failed to load tasks:", error);
       }
    };
+   
+   const taskConfigPopUp = () => {
+      if (!selectedTask) return null;
+  
+      return (
+         <Modal
+            animationType="fade"
+            transparent={true}
+            visible={taskConfigVisible}
+            onRequestClose={() => setTaskConfigVisible(false)}
+         >
+            <View style={styles.modalOverlay}>
+               <View style={styles.modalContent}>
+               {/* Edit Button */}
+               <TouchableOpacity
+                  style={styles.editButton}
+                  onPress={() => {
+                     setTaskConfigVisible(false);
+                     navigation.navigate("EditTask", { task: selectedTask });
+                  }}
+               >
+                  <Text style={styles.editText}>Edit</Text>
+               </TouchableOpacity>
+   
+               {/* Delete Button */}
+               <TouchableOpacity
+                  style={styles.deleteButton}
+                  onPress={() => {
+                     setTaskConfigVisible(false);
+                     navigation.navigate("DeleteTask", { task: selectedTask });
+                  }}
+               >
+                  <Text style={styles.deleteText}>Delete</Text>
+               </TouchableOpacity>
+               </View>
+            </View>
+         </Modal>
+      );
+    };
+   
    
    useFocusEffect(
       useCallback(() => {
@@ -48,31 +89,31 @@ const Schedule: React.FC<Props> = ({ navigation }) => {
             renderItem={({ item }) => (
                <View style={styles.taskItem}>
                   <View style={{ flex: 1 }}>
-                     <Text style={styles.taskTitle}>{item.task}</Text>
-                     <Text>{item.startTime} - {item.endTime}</Text>
-                     <Text>{item.repeatable ? "Repeatable" : "One-time"}</Text>
-                     {item.link ? <Text style={styles.link}>{item.link}</Text> : null}
+                  <Text style={styles.taskTitle}>{item.task}</Text>
+                  <Text>
+                     {item.startTime} - {item.endTime}
+                  </Text>
+                  <Text>{item.repeatable ? "Repeatable" : "One-time"}</Text>
+                  {item.link ? <Text style={styles.link}>{item.link}</Text> : null}
                   </View>
 
-                  {/* Edit Button */}
                   <TouchableOpacity
-                     style={styles.editButton}   
-                     onPress={() => navigation.navigate('EditTask', {task: item})}
+                  onPress={() => {
+                     setSelectedTask(item);
+                     setTaskConfigVisible(true);
+                  }}
                   >
-                     <Text style={styles.editText}>Edit</Text>
-                  </TouchableOpacity>
-
-                  {/* Delete Button */}
-                  <TouchableOpacity
-                     style={styles.deleteButton}
-                     onPress={() => navigation.navigate("DeleteTask", { task: item })}
-                  >
-                     <Text style={styles.deleteText}>Delete</Text>
+                  <Ionicons
+                     name="ellipsis-vertical-outline"
+                     size={24}
+                     color="black"
+                  />
                   </TouchableOpacity>
                </View>
             )}
             ListEmptyComponent={<Text>No tasks found.</Text>}
          />
+
 
          {/* Add Button */}
          <TouchableOpacity
@@ -81,6 +122,8 @@ const Schedule: React.FC<Props> = ({ navigation }) => {
          >
             <Ionicons name="add" size={30} color="#fff" />
          </TouchableOpacity>
+
+         {taskConfigPopUp()}
       </View>
    );
 }
@@ -142,6 +185,23 @@ const styles = StyleSheet.create({
       color: 'blue',
       marginTop: 5,
    },
+   modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    modalContent: {
+      width: '80%',
+      backgroundColor: 'white',
+      borderRadius: 20,
+      padding: 20,
+      elevation: 10,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+    },
 });
 
 export default Schedule;

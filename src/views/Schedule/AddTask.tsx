@@ -25,7 +25,7 @@ const AddSchedule: React.FC<Props> = ({ navigation }) => {
    });
 
    const handleSave = async() => {
-      const newId = uuid.v4(); // call the function
+      const newId = uuid.v4();
       setId(newId);
       const newTask = {
          id: newId,
